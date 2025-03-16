@@ -4,14 +4,12 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
 type Client struct {
 	writeChan chan interface{}
 	conn      *websocket.Conn
-	docID     uuid.UUID
 	username  string
 }
 

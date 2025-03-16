@@ -16,3 +16,19 @@ func Delete(room *Room, pos int) {
 	room.Content = string(content)
 
 }
+
+func (room *Room) removeClient(client *Client) {
+	room.mu.Lock()
+
+	defer room.mu.Unlock()
+
+	newClients := []*Client{}
+
+	for _, c := range room.Clients {
+		if c != client {
+			newClients = append(newClients, c)
+		}
+	}
+
+	room.Clients = newClients
+}

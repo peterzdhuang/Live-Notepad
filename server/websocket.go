@@ -4,8 +4,6 @@ import (
 	"log"
 	"net/http"
 	"sync"
-
-	"github.com/google/uuid"
 )
 
 func handleRoom(roomId string) *Room {
@@ -38,48 +36,74 @@ func (room *Room) runRoom() {
 		}
 		room.mu.Unlock()
 
-		msg := map[string]interface{"type": "op", "operation": op}
+		msg := map[string]interface{}{"type": "op", "operation": op}
+		for _, client := range room.Clients {
+			select {
+			case client.writeChan <- msg:
+
+			default:
+				log.Println("Client write channel full")
+
+			}
+		}
+		room.mu.Lock()
 	}
 
 }
 func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	roomId := r.URL.Query().Get("room")
+	username := r.URL.Query().Get("username")
 	if roomId == "" {
 		http.Error(w, "Missing room", http.StatusBadRequest)
 		return
 	}
-	roomsMutex.Lock()
+
+	room := handleRoom(roomId)
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		log.Println("Websocket upgrade error")
 		return
 	}
 
-	if !exist {
-		room = &Room{}
-
+	client := &Client{
+		conn:      conn,
+		writeChan: make(chan interface{}, 100),
+		username:  username,
 	}
-	rid := uuid.New()
-	client := &Client{conn: conn, docID: rid}
 
-	clientsMu.Lock()
-	clients[rid] = client
-	clientsMu.Unlock()
+	room.mu.Lock()
+	room.Clients = append(room.Clients, client)
+	room.mu.Unlock()
 
-	defer func() {
-		clientsMu.Lock()
-		// implement delete functions
-		clientsMu.Unlock()
-		conn.Close()
+	initMsg := map[string]interface{}{"type": "init", "content": room.Content}
+	client.writeChan <- initMsg
+
+	go func() {
+		for msg := range client.writeChan {
+			if err := client.conn.WriteJSON(msg); err != nil {
+				break
+			}
+		}
+		defer client.conn.Close()
 	}()
 
-	for {
-		var msg map[string]interface{}
-		if err := conn.ReadJSON(&msg); err != nil {
-			return
+	go func() {
+		defer func() {
+			close(client.writeChan)
+			room.mu.Lock()
+			room.removeClient(client)
+			room.mu.Unlock()
+		}()
+
+		for {
+			var op Operation
+			if err := client.conn.ReadJSON(&op); err != nil {
+				break
+			}
+			room.operationChan <- op
+
 		}
-		processMessage(client, msg)
-	}
+	}()
 }
