@@ -32,9 +32,13 @@ const Editor = ({ onChange }) => {
             ],
           },
         });
+        window.setEditorContents = (delta) => {
+          quillRef.current.updateContents(delta);
+        };
         // Set up text-change listener
         quillRef.current.on('text-change', (delta, oldDelta, source) => {
           if (source === 'user') {
+            console.log(delta);
             onChangeRef.current(delta);
           }
         });
