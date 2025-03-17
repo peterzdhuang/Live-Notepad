@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -33,10 +34,14 @@ func (room *Room) runRoom() {
 		log.Printf("Processing operation: type=%s, position=%d, character=%s", op.Type, op.Position, op.Character)
 		room.mu.Lock()
 		before := room.Content
+		// Quill:
+		// There is this thing {retain : x}
+		// Which essentially is the pos
+		//
 		if op.Type == "insert" && op.Position <= len(room.Content) {
 			Append(room, op.Character, op.Position)
 		} else if op.Type == "delete" && op.Position <= len(room.Content) {
-			Delete(room, op.Position)
+			Delete(room, op.Character, op.Position)
 		}
 		after := room.Content
 		log.Printf("Content changed from '%s' to '%s'", before, after)
@@ -114,6 +119,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				log.Printf("Error reading from client %s: %v", username, err)
 				break
 			}
+			fmt.Println(op)
 			log.Printf("Received operation from client %s: type=%s, position=%d, character=%s", username, op.Type, op.Position, op.Character)
 			room.operationChan <- op
 		}

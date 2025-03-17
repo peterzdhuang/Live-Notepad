@@ -1,5 +1,10 @@
 package server
 
+import (
+	"fmt"
+	"strconv"
+)
+
 func Append(room *Room, char string, pos int) {
 	content := []byte(room.Content)
 
@@ -8,13 +13,40 @@ func Append(room *Room, char string, pos int) {
 	room.Content = string(content)
 }
 
-func Delete(room *Room, pos int) {
+func Delete(room *Room, amount string, pos int) {
+	// This needs to take in the amount to delete
 	content := []byte(room.Content)
 
-	content = append(content[:pos], content[:pos+1]...)
+	amountInt, err := strconv.Atoi(amount)
+	if err != nil {
+		// Handle the error, e.g., print an error message and return
+		fmt.Println("Invalid amount:", err)
+		return
+	}
+
+	if amountInt < 0 {
+		fmt.Println("Amount must be a non-negative integer")
+		return
+	}
+
+	if pos < 0 || pos >= len(content) {
+		fmt.Println("Position out of bounds")
+		return
+	}
+
+	if amountInt == 0 {
+		return // Nothing to delete
+	}
+
+	for i := 0; i < amountInt; i++ {
+		if pos >= len(content) {
+			break // Stop deleting if position exceeds the remaining content.
+		}
+
+		content = append(content[:pos], content[pos+1:]...)
+	}
 
 	room.Content = string(content)
-
 }
 
 func (room *Room) removeClient(client *Client) {
