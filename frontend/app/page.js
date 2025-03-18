@@ -8,7 +8,9 @@ const Home = () => {
   const [username] = useState("username");
   const editorRef = useRef(null);
 
+  const queuedMessages = useRef([]);
   const handleEditorChange = (delta) => { 
+    console.log(delta)
     var json = {};
     if (delta["ops"][1] === undefined) {
       json["position"] = 0
@@ -32,26 +34,39 @@ const Home = () => {
     }
     WebSocketService.send(json);
   };
-
   useEffect(() => {
     WebSocketService.connect(roomId, (data) => {
       if (editorRef.current && editorRef.current.setContents) {
+        // First process any queued messages
+        queuedMessages.current.forEach((queuedData) => {
+          if (queuedData.type === 'init') {
+            editorRef.current.setContents(queuedData.content);
+          } else if (queuedData.type === 'op') {
+            editorRef.current.setContents(queuedData.operation);
+          }
+        });
+        queuedMessages.current = [];
+
+        // Process the current incoming data
         if (data.type === 'init') {
-          editorRef.current.setContents(data.content); // Load initial content
+          console.log(data.content);
+          editorRef.current.setContents(data.content);
         } else if (data.type === 'op') {
-          console.log(data)
-          editorRef.current.setContents(data.operation); // Apply real-time updates
+          editorRef.current.setContents(data.operation);
         }
       } else {
-        console.warn('Editor not ready yet, received data:', data);
-        // Optionally, queue the data for later processing
+        console.warn('Editor not ready yet, queuing data:', data);
+        // Queue the message for later processing
+        queuedMessages.current.push(data);
       }
     });
 
-    return () => {
-      WebSocketService.disconnect();
-    };
-  }, [roomId]);
+  return () => {
+    WebSocketService.disconnect();
+  };
+}, [roomId]);
+
+
 
   // Right now the issue is that it applies twice to the same guy
   // also the content tracking is just completely wrong

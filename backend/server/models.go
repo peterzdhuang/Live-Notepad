@@ -11,6 +11,7 @@ type Client struct {
 	writeChan chan interface{}
 	conn      *websocket.Conn
 	username  string
+	uuid      string
 }
 
 type Room struct {
@@ -27,9 +28,10 @@ var (
 )
 
 type Operation struct {
-	Type      string `json:"type"`      // "insert" or "delete"
-	Position  int    `json:"position"`  // Position in the document
-	Character string `json:"character"` // Character to insert (for insert only)
+	Type       string `json:"type"`      // "insert" or "delete"
+	Position   int    `json:"position"`  // Position in the document
+	Character  string `json:"character"` // Character to insert (for insert only)
+	SenderUUID string `json:"senderUUID"`
 }
 
 var upgrader = websocket.Upgrader{

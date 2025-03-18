@@ -1,10 +1,11 @@
 package server
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"sync"
+
+	"github.com/google/uuid"
 )
 
 func handleRoom(roomId string) *Room {
@@ -29,15 +30,13 @@ func handleRoom(roomId string) *Room {
 	}
 	return room
 }
+
 func (room *Room) runRoom() {
 	for op := range room.operationChan {
-		log.Printf("Processing operation: type=%s, position=%d, character=%s", op.Type, op.Position, op.Character)
+		log.Printf("Processing operation: type=%s, position=%d, character=%s, senderUUID=%s", op.Type, op.Position, op.Character, op.SenderUUID)
 		room.mu.Lock()
 		before := room.Content
-		// Quill:
-		// There is this thing {retain : x}
-		// Which essentially is the pos
-		//
+
 		if op.Type == "insert" && op.Position <= len(room.Content) {
 			Append(room, op.Character, op.Position)
 		} else if op.Type == "delete" && op.Position <= len(room.Content) {
@@ -49,16 +48,18 @@ func (room *Room) runRoom() {
 
 		msg := map[string]interface{}{"type": "op", "operation": op}
 		for _, client := range room.Clients {
-			select {
-			case client.writeChan <- msg:
-				log.Printf("Sent operation to client %s in room %s", client.username, room.RoomName)
-			default:
-				log.Println("Client write channel full")
+			if client.uuid != op.SenderUUID { // Exclude the sender
+				select {
+				case client.writeChan <- msg:
+					log.Printf("Sent operation to client %s in room %s", client.username, room.RoomName)
+				default:
+					log.Println("Client write channel full")
+				}
 			}
 		}
-		// Note: Removed stray room.mu.Lock() that was in the original code as it lacked an unlock and seemed unintended.
 	}
 }
+
 func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	roomId := r.URL.Query().Get("room")
 	username := r.URL.Query().Get("username")
@@ -80,14 +81,24 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		conn:      conn,
 		writeChan: make(chan interface{}, 100),
 		username:  username,
+		uuid:      uuid.New().String(), // Generate UUID for the client
 	}
 
 	room.mu.Lock()
 	room.Clients = append(room.Clients, client)
 	room.mu.Unlock()
-	log.Printf("Client %s joined room %s", username, roomId)
+	log.Printf("Client %s joined room %s with UUID %s", username, roomId, client.uuid)
+	initMsg := map[string]interface{}{
+		"type": "init",
+		"content": map[string]interface{}{
+			"content": map[string]interface{}{
+				"ops": []map[string]interface{}{
+					{"insert": room.Content},
+				},
+			},
+		},
+	}
 
-	initMsg := map[string]interface{}{"type": "init", "content": room.Content}
 	client.writeChan <- initMsg
 	log.Printf("Sent initial content to client %s", username)
 
@@ -119,7 +130,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				log.Printf("Error reading from client %s: %v", username, err)
 				break
 			}
-			fmt.Println(op)
+			op.SenderUUID = client.uuid // Add the sender's UUID to the operation
 			log.Printf("Received operation from client %s: type=%s, position=%d, character=%s", username, op.Type, op.Position, op.Character)
 			room.operationChan <- op
 		}

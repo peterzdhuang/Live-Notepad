@@ -38,6 +38,7 @@ const Editor = ({ onChange }, ref) => {
   // Expose setContents method via ref
   useImperativeHandle(ref, () => ({
     setContents: (json) => {
+      console.log(json);
       if (quillRef.current) {
         const position = json.position; // Number of characters to retain (0 if at start)
         const type = json.type;         // "insert" or "delete"
