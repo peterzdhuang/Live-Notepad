@@ -1,27 +1,21 @@
-import React, { useEffect, useRef } from 'react';
-import 'quill/dist/quill.snow.css'; // CSS can stay as is; Next.js handles it
+import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import 'quill/dist/quill.snow.css';
 
-const Editor = ({ onChange }) => {
-  // Ref to hold the Quill instance
+const Editor = ({ onChange }, ref) => {
   const quillRef = useRef(null);
-  // Ref to hold the DOM element for the editor
   const editorRef = useRef(null);
-  // Ref to keep the latest onChange function
   const onChangeRef = useRef(onChange);
 
-  // Update onChangeRef whenever onChange prop changes
+  // Keep onChange up-to-date
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  // Initialize Quill only on the client-side
+  // Initialize Quill
   useEffect(() => {
-    // Check if running on the client and refs are ready
     if (typeof window !== 'undefined' && editorRef.current && !quillRef.current) {
-      // Dynamically import Quill to avoid SSR
       import('quill').then((QuillModule) => {
         const Quill = QuillModule.default;
-        // Initialize Quill with the DOM element
         quillRef.current = new Quill(editorRef.current, {
           theme: 'snow',
           modules: {
@@ -32,35 +26,54 @@ const Editor = ({ onChange }) => {
             ],
           },
         });
-        window.setEditorContents = (delta) => {
-          quillRef.current.updateContents(delta);
-        };
-        // Set up text-change listener
         quillRef.current.on('text-change', (delta, oldDelta, source) => {
           if (source === 'user') {
-            console.log(delta);
             onChangeRef.current(delta);
           }
         });
       });
     }
-  }, []); // Empty dependency array: run only once on mount
+  }, []);
 
-  // Optional: Expose a method to set editor contents
-  const setContents = (delta) => {
-    if (quillRef.current) {
-      quillRef.current.updateContents(delta);
-    }
-  };
+  // Expose setContents method via ref
+  useImperativeHandle(ref, () => ({
+    setContents: (json) => {
+      if (quillRef.current) {
+        const position = json.position; // Number of characters to retain (0 if at start)
+        const type = json.type;         // "insert" or "delete"
+        const character = json.character; // String to insert or number of chars to delete (as a string)
+        var delta = {}
+        if (type === "insert") {
+          if (position === 0) {
+            // Insert at the beginning
+            delta = { ops: [{ insert: character }] };
+            
+          } else {
+            // Retain up to position, then insert
+            delta = { ops: [{ retain: position }, { insert: character }] };
+          }
+        } else if (type === "delete") {
+          const deleteCount = parseInt(character, 10); // Convert string "number" to integer
+          if (position === 0) {
+            // Delete from the beginning
+            delta = { ops: [{ delete: deleteCount }] };
+          } else {
+            // Retain up to position, then delete
+            delta = { ops: [{ retain: position }, { delete: deleteCount }] };
+          }
+        } else {
+          // Handle invalid type
+          throw new Error("Invalid type: " + type);
+        }
+        console.log(delta);
+        quillRef.current.updateContents(delta);
+      } else {
+        console.warn('Quill is not initialized yet');
+      }
+    },
+  }));
 
-  useEffect(() => {
-    if (quillRef.current) {
-      window.setEditorContents = setContents;
-    }
-  }, []); // Run once when Quill is ready
-
-  // Render the editor container
   return <div ref={editorRef} style={{ height: '400px' }} />;
 };
 
-export default Editor;
+export default forwardRef(Editor);

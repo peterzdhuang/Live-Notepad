@@ -1,11 +1,12 @@
 'use client'
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Editor from '../components/Editor';
 import WebSocketService from '../utils/WebSocket';
 
 const Home = () => {
   const [roomId] = useState('room1'); // Hardcoded room ID
   const [username] = useState("username");
+  const editorRef = useRef(null);
 
   const handleEditorChange = (delta) => { 
     var json = {};
@@ -34,19 +35,31 @@ const Home = () => {
 
   useEffect(() => {
     WebSocketService.connect(roomId, (data) => {
-      if (data.type === 'init') {
-        Editor.setContents(data.content); // Load initial content
-      } else if (data.type === 'op') {
-        Editor.setContents(data.operation); // Apply real-time updates
+      if (editorRef.current && editorRef.current.setContents) {
+        if (data.type === 'init') {
+          editorRef.current.setContents(data.content); // Load initial content
+        } else if (data.type === 'op') {
+          console.log(data)
+          editorRef.current.setContents(data.operation); // Apply real-time updates
+        }
+      } else {
+        console.warn('Editor not ready yet, received data:', data);
+        // Optionally, queue the data for later processing
       }
     });
+
+    return () => {
+      WebSocketService.disconnect();
+    };
   }, [roomId]);
 
+  // Right now the issue is that it applies twice to the same guy
+  // also the content tracking is just completely wrong
 
   return (
     <div>
       <h1>Google Docs Clone</h1>
-      <Editor onChange={handleEditorChange} />
+      <Editor ref={editorRef} onChange={handleEditorChange} />
     </div>
   );
 };
