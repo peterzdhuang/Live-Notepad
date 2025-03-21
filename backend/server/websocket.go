@@ -88,15 +88,9 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	room.Clients = append(room.Clients, client)
 	room.mu.Unlock()
 	log.Printf("Client %s joined room %s with UUID %s", username, roomId, client.uuid)
+
 	initMsg := map[string]interface{}{
-		"type": "init",
-		"content": map[string]interface{}{
-			"content": map[string]interface{}{
-				"ops": []map[string]interface{}{
-					{"insert": room.Content},
-				},
-			},
-		},
+		"type": "init", "content": room.Content,
 	}
 
 	client.writeChan <- initMsg
