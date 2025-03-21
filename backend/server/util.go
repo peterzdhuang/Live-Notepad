@@ -49,7 +49,7 @@ func Delete(room *Room, amount string, pos int) {
 	room.Content = string(content)
 }
 
-func (room *Room) removeClient(client *Client) {
+func (room *Room) removeClient(client *Client) bool {
 	room.mu.Lock()
 
 	defer room.mu.Unlock()
@@ -63,4 +63,13 @@ func (room *Room) removeClient(client *Client) {
 	}
 
 	room.Clients = newClients
+	return len(newClients) == 0
+}
+
+func (room *Room) removeRoom() {
+	roomsMutex.Lock()
+	defer roomsMutex.Unlock()
+
+	close(room.operationChan)
+	delete(rooms, room.RoomName)
 }

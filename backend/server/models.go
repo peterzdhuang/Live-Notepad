@@ -12,6 +12,7 @@ type Client struct {
 	conn      *websocket.Conn
 	username  string
 	uuid      string
+	done      chan struct{}
 }
 
 type Room struct {

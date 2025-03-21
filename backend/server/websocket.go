@@ -1,6 +1,8 @@
 package server
 
 import (
+	"errors"
+	"io"
 	"log"
 	"net/http"
 	"sync"
@@ -82,6 +84,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		writeChan: make(chan interface{}, 100),
 		username:  username,
 		uuid:      uuid.New().String(), // Generate UUID for the client
+		done:      make(chan struct{}),
 	}
 
 	room.mu.Lock()
@@ -98,35 +101,52 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	// Goroutine to write messages to the client
 	go func() {
-		for msg := range client.writeChan {
-			if err := client.conn.WriteJSON(msg); err != nil {
-				log.Printf("Error writing to client %s: %v", username, err)
-				break
-			}
-			log.Printf("Sent message to client %s: %+v", username, msg)
-		}
 		defer client.conn.Close()
+		for {
+			select {
+			case msg, ok := <-client.writeChan:
+				if !ok {
+					return
+				}
+				if err := client.conn.WriteJSON(msg); err != nil {
+					log.Printf("Error writing to client %s: %v", username, err)
+					return
+				}
+				log.Printf("Sent msg to client")
+
+			case <-client.done:
+				return
+			}
+		}
 	}()
 
 	// Goroutine to read messages from the client
 	go func() {
 		defer func() {
 			close(client.writeChan)
-			room.mu.Lock()
-			room.removeClient(client)
-			room.mu.Unlock()
+			if room.removeClient(client) {
+				room.removeRoom()
+			}
 			log.Printf("Client %s left room %s", username, roomId)
+			close(client.done)
 		}()
 
 		for {
-			var op Operation
-			if err := client.conn.ReadJSON(&op); err != nil {
-				log.Printf("Error reading from client %s: %v", username, err)
-				break
+			select {
+			case <-client.done:
+				return // exit the goroutine gracefully
+			default:
+				var op Operation
+				if err := client.conn.ReadJSON(&op); err != nil {
+					if !errors.Is(err, io.EOF) {
+						log.Printf("Error reading from client %s: %v", username, err)
+					}
+					return
+				}
+				op.SenderUUID = client.uuid
+				log.Printf("Received operation from client %s: type=%s, position=%d, character=%s", username, op.Type, op.Position, op.Character)
+				room.operationChan <- op
 			}
-			op.SenderUUID = client.uuid // Add the sender's UUID to the operation
-			log.Printf("Received operation from client %s: type=%s, position=%d, character=%s", username, op.Type, op.Position, op.Character)
-			room.operationChan <- op
 		}
 	}()
 }
