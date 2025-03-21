@@ -49,8 +49,8 @@ const Home = () => {
 
         // Process the current incoming data
         if (data.type === 'init') {
-          console.log(data.content);
-          editorRef.current.setContents(data.content);
+          const delta = {"position" : 0, "type" : "insert", "character" : data.content}; 
+          editorRef.current.setContents(delta);
         } else if (data.type === 'op') {
           editorRef.current.setContents(data.operation);
         }
