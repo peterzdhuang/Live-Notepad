@@ -4,9 +4,8 @@ class WebSocketService {
   constructor() {
     this.client = null;
   }
-
-  connect(roomId, onMessage) {
-    this.client = new W3CWebSocket(`ws://localhost:8080/ws?room=${roomId}&?=username=user1`);
+  connect(roomId, username, onMessage) {
+    this.client = new W3CWebSocket(`ws://localhost:8080/ws?room=${roomId}&username=${username}`);
     this.client.onopen = () => {
       console.log('WebSocket Client Connected');
     };
@@ -22,6 +21,12 @@ class WebSocketService {
   send(message) {
     if (this.client) {
       this.client.send(JSON.stringify(message));
+    }
+  }
+  disconnect() {
+    if (this.client) {
+      this.client.close();
+      this.client = null;
     }
   }
 }

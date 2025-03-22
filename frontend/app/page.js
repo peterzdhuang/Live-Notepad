@@ -1,82 +1,108 @@
-'use client'
-import React, { useEffect, useState, useRef } from 'react';
-import Editor from '../components/Editor';
-import WebSocketService from '../utils/WebSocket';
+"use client"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 
-const Home = () => {
-  const [roomId] = useState('room1'); // Hardcoded room ID
-  const [username] = useState("username");
-  const editorRef = useRef(null);
+export default function Home() {
+  const router = useRouter()
+  const [username, setUsername] = useState("")
+  const [roomId, setRoomId] = useState("")
+  const [activeTab, setActiveTab] = useState("create") // 'join' or 'create'
+  const [error, setError] = useState("")
 
-  const queuedMessages = useRef([]);
-  const handleEditorChange = (delta) => { 
-    console.log(delta)
-    var json = {};
-    if (delta["ops"][1] === undefined) {
-      json["position"] = 0
-      if ("delete" in delta["ops"][0]) {
-        json["type"] = "delete"
-        json["character"] = String(delta["ops"][0]["delete"]);
-      } else {
-        json["type"] = "insert"
-        json["character"] = delta["ops"][0]["insert"]
-      }
-    } else if ("delete" in delta["ops"][1]) {
-      // Starting at pos delete x number of positions
-      json["position"] = delta["ops"][0]["retain"];
-      json["type"] = "delete"
-      json["character"] = String(delta["ops"][1]["delete"]);
-    } else {
-      //starting at pos insert x
-      json["position"] = delta["ops"][0]["retain"]
-      json["type"] = "insert"
-      json["character"] = delta["ops"][1]["insert"]
+  const handleJoinRoom = (e) => {
+    e.preventDefault()
+    if (!username.trim()) {
+      setError("Username is required")
+      return
     }
-    WebSocketService.send(json);
-  };
-  useEffect(() => {
-    WebSocketService.connect(roomId, (data) => {
-      if (editorRef.current && editorRef.current.setContents) {
-        // First process any queued messages
-        queuedMessages.current.forEach((queuedData) => {
-          if (queuedData.type === 'init') {
-            editorRef.current.setContents(queuedData.content);
-          } else if (queuedData.type === 'op') {
-            editorRef.current.setContents(queuedData.operation);
-          }
-        });
-        queuedMessages.current = [];
+    if (!roomId.trim()) {
+      setError("Room ID is required")
+      return
+    }
 
-        // Process the current incoming data
-        if (data.type === 'init') {
-          const delta = {"position" : 0, "type" : "insert", "character" : data.content}; 
-          editorRef.current.setContents(delta);
-        } else if (data.type === 'op') {
-          editorRef.current.setContents(data.operation);
-        }
-      } else {
-        console.warn('Editor not ready yet, queuing data:', data);
-        // Queue the message for later processing
-        queuedMessages.current.push(data);
-      }
-    });
+    // Navigate to the room with the username as a query parameter
+    router.push(`/${roomId}?username=${encodeURIComponent(username)}`)
+  }
 
-  return () => {
-    WebSocketService.disconnect();
-  };
-}, [roomId]);
+  const handleCreateRoom = (e) => {
+    e.preventDefault()
+    if (!username.trim()) {
+      setError("Username is required")
+      return
+    }
 
+    // Generate a random room ID
+    const newRoomId = Math.random().toString(36).substring(2, 8)
 
-
-  // Right now the issue is that it applies twice to the same guy
-  // also the content tracking is just completely wrong
+    // Navigate to the new room with the username as a query parameter
+    router.push(`/${newRoomId}?username=${encodeURIComponent(username)}`)
+  }
 
   return (
-    <div>
-      <h1>Google Docs Clone</h1>
-      <Editor ref={editorRef} onChange={handleEditorChange} />
-    </div>
-  );
-};
+    <div className="room-selection-container">
+      <div className="room-selection-card">
+        <h1 className="room-selection-title">Note Share</h1>
 
-export default Home;
+        <div className="tabs">
+        
+          <button className={`tab ${activeTab === "create" ? "active" : ""}`} onClick={() => setActiveTab("create")}>
+            Create Room
+          </button>
+          <button className={`tab ${activeTab === "join" ? "active" : ""}`} onClick={() => setActiveTab("join")}>
+            Join Room
+          </button>
+        </div>
+
+        {error && <div className="error-message">{error}</div>}
+
+        {activeTab === "join" ? (
+          <form onSubmit={handleJoinRoom} className="room-form">
+            <div className="form-group">
+              <label htmlFor="username">Username</label>
+              <input
+                type="text"
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="roomId">Room ID</label>
+              <input
+                type="text"
+                id="roomId"
+                value={roomId}
+                onChange={(e) => setRoomId(e.target.value)}
+                placeholder="Enter room ID"
+              />
+            </div>
+
+            <button type="submit" className="submit-button">
+              Join Room
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleCreateRoom} className="room-form">
+            <div className="form-group">
+              <label htmlFor="create-username">Username</label>
+              <input
+                type="text"
+                id="create-username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+              />
+            </div>
+
+            <button type="submit" className="submit-button create">
+              Create New Room
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}
+
