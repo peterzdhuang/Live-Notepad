@@ -7,11 +7,21 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type CursorPosition struct {
+	X        float64 `json:"x"`
+	Y        float64 `json:"Y"`
+	height   float64 `json:"height"`
+	Username string  `json:"username"`
+	UUID     string  `json:"uuid"`
+	Colour   string  `json:colour`
+}
+
 type Client struct {
 	writeChan chan interface{}
 	conn      *websocket.Conn
 	username  string
 	uuid      string
+	colour    string
 	done      chan struct{}
 }
 

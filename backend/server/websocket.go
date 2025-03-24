@@ -85,6 +85,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		username:  username,
 		uuid:      uuid.New().String(), // Generate UUID for the client
 		done:      make(chan struct{}),
+		colour:    GenerateColour(),
 	}
 
 	room.mu.Lock()
@@ -132,20 +133,65 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}()
 
 		for {
-			select {
-			case <-client.done:
-				return // exit the goroutine gracefully
-			default:
-				var op Operation
-				if err := client.conn.ReadJSON(&op); err != nil {
-					if !errors.Is(err, io.EOF) {
-						log.Printf("Error reading from client %s: %v", username, err)
-					}
-					return
+			var msg map[string]interface{}
+			if err := client.conn.ReadJSON(&msg); err != nil {
+				if !errors.Is(err, io.EOF) {
+					log.Printf("Error reading from client %s: %v", username, err)
 				}
-				op.SenderUUID = client.uuid
-				log.Printf("Received operation from client %s: type=%s, position=%d, character=%s", username, op.Type, op.Position, op.Character)
+				return
+			}
+
+			msgType, ok := msg["type"].(string)
+			if !ok {
+				log.Println("Received message without type")
+				continue
+			}
+
+			switch msgType {
+			case "insert", "delete":
+				// Handle text operations
+				op := Operation{
+					Type:       msgType,
+					Position:   int(msg["position"].(float64)),
+					Character:  msg["character"].(string),
+					SenderUUID: client.uuid,
+				}
 				room.operationChan <- op
+
+			case "cursor":
+				// Handle cursor updates
+				x, _ := msg["x"].(float64)
+				y, _ := msg["y"].(float64)
+				height, _ := msg["height"].(float64)
+
+				cursor := CursorPosition{
+					X:        x,
+					Y:        y,
+					height:   height,
+					Username: client.username,
+					UUID:     client.uuid,
+					Colour:   client.colour,
+				}
+
+				// Broadcast to other clients
+				room.mu.Lock()
+				for _, c := range room.Clients {
+					if c.uuid != client.uuid {
+						msg := map[string]interface{}{
+							"type":   "cursor",
+							"cursor": cursor,
+						}
+						select {
+						case c.writeChan <- msg:
+						default:
+							log.Println("Client channel full, dropping cursor update")
+						}
+					}
+				}
+				room.mu.Unlock()
+
+			default:
+				log.Printf("Unknown message type: %s", msgType)
 			}
 		}
 	}()

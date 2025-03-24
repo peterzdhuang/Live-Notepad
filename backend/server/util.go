@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"math/rand/v2"
 	"strconv"
 )
 
@@ -72,4 +73,8 @@ func (room *Room) removeRoom() {
 
 	close(room.operationChan)
 	delete(rooms, room.RoomName)
+}
+
+func GenerateColour() string {
+	return fmt.Sprintln("hsl(%.0f, 70%%, 60%%)", rand.Float64()*360)
 }
