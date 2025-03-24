@@ -4,6 +4,7 @@ class WebSocketService {
   constructor() {
     this.client = null;
   }
+  
   connect(roomId, username, onMessage) {
     this.client = new W3CWebSocket(`ws://localhost:8080/ws?room=${roomId}&username=${username}`);
     this.client.onopen = () => {

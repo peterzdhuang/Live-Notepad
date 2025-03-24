@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import 'quill/dist/quill.snow.css';
 
-const Editor = ({ onChange }, ref) => {
+const Editor = ({ onChange, onSelectionChange }, ref) => {
   const quillRef = useRef(null);
   const editorRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -34,6 +34,12 @@ const Editor = ({ onChange }, ref) => {
             onChangeRef.current(delta);
           }
         });
+
+        quillRef.current.on('selection-change', (range, oldRange, source) => {
+          if (onSelectionChange) {
+            onSelectionChange(range);
+          }
+        })
 
         // Apply all queued deltas once Quill is initialized
         pendingDeltasRef.current.forEach((delta) => {
@@ -86,7 +92,24 @@ const Editor = ({ onChange }, ref) => {
         console.warn('Quill is not initialized yet, queuing delta');
         pendingDeltasRef.current.push(delta); // Add to queue if Quill isn't ready
       }
+    }, 
+
+    getCursorPosition: () => {
+      if (!quillRef.current) return null;
+      const range = quillRef.current.getSelection();
+      if (!range) return null;
+      
+      return {
+        index: range.index,
+        bounds: quillRef.current.getBounds(range.index),
+        length: range.length
+      };
     },
+
+    getBounds: (index) => {
+      if (!quillRef.current) return null;
+      return quillRef.current.getBounds(index);
+    }
   }));
 
   return <div ref={editorRef} style={{ height: '400px' }} />;
