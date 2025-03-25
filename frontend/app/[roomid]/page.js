@@ -4,6 +4,7 @@ import { useRouter, useSearchParams, useParams } from "next/navigation"
 import Editor from "../../components/Editor"
 import WebSocketService from "../../utils/WebSocket"
 import RemoteCursor from "../../components/Remotecursor"
+
 export default function RoomPage({ params }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -27,6 +28,31 @@ export default function RoomPage({ params }) {
   const queuedMessages = useRef([])
   const [isConnected, setIsConnected] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
+
+  // New export function
+  const handleExportTxt = () => {
+    // Get the current content from the editor
+    const content = editorRef.current.getText();
+    
+    // Create a Blob with the content
+    const blob = new Blob([content], { type: 'text/plain' });
+    
+    // Create a download link
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    
+    // Generate filename with room ID and timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    link.download = `notepad-${roomId}-${timestamp}.txt`;
+    
+    // Trigger download
+    document.body.appendChild(link);
+    link.click();
+    
+    // Clean up
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  }
 
   const handleEditorChange = (delta) => {
     var json = {}
@@ -70,20 +96,6 @@ export default function RoomPage({ params }) {
     if (roomId) {
       WebSocketService.connect(roomId, username, (data) => {
         setIsConnected(true)
-        
-        if (data.type == 'cursor') {
-          setRemoteCursors(prev => ({
-            ...prev, 
-            [data["cursor"].username] : {
-              x : data["cursor"].x,
-              y : data["cursor"].y, 
-              height : data["cursor"].height, 
-              username : data["cursor"].username,
-              colour : data["cursor"].colour,
-              lastUpdate : Date.now()
-            }
-          }));
-        }
         if (editorRef.current && editorRef.current.setContents) {
           // First process any queued messages
           queuedMessages.current.forEach((queuedData) => {
@@ -103,22 +115,19 @@ export default function RoomPage({ params }) {
             console.log(data.operation)
             editorRef.current.setContents(data.operation)
           } else if (data.type === "cursor") {
-            console.log("123");
-
-            console.log(data.cursor);
+            var data = data["cursor"]
+            console.log(data);
             setRemoteCursors(prev => ({
               ...prev,
-              [data.userId]: {
-                x : data.x,
-                y : data.y, 
+              [data.uuid]: {
+                x : data.X,
+                y : data.Y, 
                 height : data.height,
                 username: data.username,
                 colour: data.colour,
                 lastUpdated: Date.now()
               }
               }))
-            
-              console.log(remoteCursors[data.userId])
           }
         } else {
           console.warn("Editor not ready yet, queuing data:", data)
@@ -134,7 +143,9 @@ export default function RoomPage({ params }) {
     }
   }, [roomId, username])
 
-
+  useEffect(() => {
+    console.log(remoteCursors)
+  }, [remoteCursors])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -145,7 +156,7 @@ export default function RoomPage({ params }) {
         );
         return updated;
       });
-    }, 1000);
+    }, 300);
 
     return () => clearInterval(interval);
   }, []);
@@ -163,7 +174,6 @@ export default function RoomPage({ params }) {
     console.log(cursorPosition)
     if (!cursorTimeout.current) {
       cursorTimeout.current = setTimeout(() => {
-
         console.log(cursorPosition);
         WebSocketService.send({
           type : 'cursor',
@@ -174,13 +184,13 @@ export default function RoomPage({ params }) {
         cursorTimeout.current = null;
       }, 100);
     }
-
   };
 
   // If no username, show loading or redirect
   if (!username) {
     return <div>Redirecting...</div>
   }
+
   return (
     <div className="editor-page">
       <div className="editor-header">
@@ -188,13 +198,16 @@ export default function RoomPage({ params }) {
           <button className="back-button" onClick={handleBackToSelection}>
             ← Back
           </button>
-          <h1>Google Docs Clone</h1>
+          <h1>Online Notepad</h1>
         </div>
         <div className="room-info">
           <div className="room-id-container">
             <span>Room ID: {roomId}</span>
             <button className="copy-button" onClick={handleCopyRoomId}>
               {isCopied ? "Copied!" : "Copy"}
+            </button>
+            <button className="copy-button" onClick={handleExportTxt}>
+              Export
             </button>
           </div>
           <div className="user-info">
@@ -211,12 +224,15 @@ export default function RoomPage({ params }) {
           onChange={handleEditorChange} 
           onSelectionChange={handleSelectionChange}
         />
-        
-        {Object.entries(remoteCursors).map(([userId, cursor]) => (
-          <RemoteCursor key={userId} cursor={cursor} />
-        ))}
+
+         {Object.entries(remoteCursors).map(([uuid, cursor]) => (
+            <RemoteCursor 
+              key={uuid} 
+              cursor = {cursor}
+            />
+          ))}
+
       </div>
     </div>
   )
 }
-

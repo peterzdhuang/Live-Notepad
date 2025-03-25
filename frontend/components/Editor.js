@@ -65,7 +65,6 @@ const Editor = ({ onChange, onSelectionChange }, ref) => {
         if (position === 0) {
           // Insert at the beginning
           delta = { ops: [{ insert: character }] };
-          console.log('insert at start');
         } else {
           // Retain up to position, then insert
           delta = { ops: [{ retain: position }, { insert: character }] };
@@ -109,6 +108,10 @@ const Editor = ({ onChange, onSelectionChange }, ref) => {
     getBounds: (index) => {
       if (!quillRef.current) return null;
       return quillRef.current.getBounds(index);
+    },
+    getText: () => {
+      if (!quillRef.current) return '';
+      return quillRef.current.getText();
     }
   }));
 

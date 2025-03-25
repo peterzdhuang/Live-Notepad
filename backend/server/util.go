@@ -76,5 +76,5 @@ func (room *Room) removeRoom() {
 }
 
 func GenerateColour() string {
-	return fmt.Sprintln("hsl(%.0f, 70%%, 60%%)", rand.Float64()*360)
+	return fmt.Sprintf("hsl(%.0f, 70%%, 60%%)", rand.Float64()*360)
 }

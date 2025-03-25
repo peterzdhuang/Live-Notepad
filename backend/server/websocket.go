@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -163,11 +164,11 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				x, _ := msg["x"].(float64)
 				y, _ := msg["y"].(float64)
 				height, _ := msg["height"].(float64)
-
+				fmt.Println(msg)
 				cursor := CursorPosition{
 					X:        x,
 					Y:        y,
-					height:   height,
+					Height:   height,
 					Username: client.username,
 					UUID:     client.uuid,
 					Colour:   client.colour,
