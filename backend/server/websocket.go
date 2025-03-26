@@ -147,7 +147,6 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				log.Println("Received message without type")
 				continue
 			}
-
 			switch msgType {
 			case "insert", "delete":
 				// Handle text operations

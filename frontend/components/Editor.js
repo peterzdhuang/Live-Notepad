@@ -61,7 +61,6 @@ const Editor = ({ onChange, onSelectionChange }, ref) => {
 
       // Construct the delta based on the operation type
       if (type === 'insert') {
-        console.log(type, position, character);
         if (position === 0) {
           // Insert at the beginning
           delta = { ops: [{ insert: character }] };
@@ -91,33 +90,6 @@ const Editor = ({ onChange, onSelectionChange }, ref) => {
         pendingDeltasRef.current.push(delta); // Add to queue if Quill isn't ready
       }
     }, 
-    getEditorDimensions: () => {
-      if (!quillRef.current || !editorRef.current) return null;
-
-      const root = quillRef.current.root;
-      
-      return {
-        // Client dimensions (visible area)
-        clientWidth: root.clientWidth,
-        clientHeight: root.clientHeight,
-        
-        // Scroll dimensions (total content area)
-        scrollWidth: root.scrollWidth,
-        scrollHeight: root.scrollHeight,
-        
-        // Bounding rectangle (includes positioning and transformations)
-        boundingRect: root.getBoundingClientRect(),
-        
-        // Offset from document
-        offsetTop: root.offsetTop,
-        offsetLeft: root.offsetLeft,
-        
-        // Scroll position
-        scrollTop: root.scrollTop,
-        scrollLeft: root.scrollLeft
-      };
-    },
-
     getCursorPosition: () => {
       if (!quillRef.current) return null;
       const range = quillRef.current.getSelection();

@@ -60,22 +60,30 @@ export default function RoomPage({ params }) {
       if ("delete" in delta["ops"][0]) {
         json["type"] = "delete"
         json["character"] = String(delta["ops"][0]["delete"])
+        
+        handleSelectionChange({index : 0, length : 1})
       } else {
         json["type"] = "insert"
         json["character"] = delta["ops"][0]["insert"]
+
+        handleSelectionChange({index : 1, length : 1})
       }
     } else if ("delete" in delta["ops"][1]) {
       // Starting at pos delete x number of positions
       json["position"] = delta["ops"][0]["retain"]
       json["type"] = "delete"
       json["character"] = String(delta["ops"][1]["delete"])
+      handleSelectionChange({index : json["position"] + 1, length : 1})
     } else {
       //starting at pos insert x
       json["position"] = delta["ops"][0]["retain"]
       json["type"] = "insert"
       json["character"] = delta["ops"][1]["insert"]
+      handleSelectionChange({index : json["position"] + 1, length : 1})
     }
+
     WebSocketService.send(json)
+    
   }
 
   const handleCopyRoomId = () => {
@@ -155,7 +163,6 @@ export default function RoomPage({ params }) {
 
   useEffect(() => {
     if (!editorRef.current) return;
-    console.log("123")
     const updated = Object.entries(remoteCursors).map(([uuid, cursor]) => ({
       uuid,
       cursor,
@@ -165,8 +172,6 @@ export default function RoomPage({ params }) {
   }, [remoteCursors, editorRef]);
 
   const handleSelectionChange = (range) => {
-
-    console.log(range);
     if (!cursorTimeout.current) {
       cursorTimeout.current = setTimeout(() => {
         WebSocketService.send({
