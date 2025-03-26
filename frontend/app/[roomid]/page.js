@@ -12,7 +12,6 @@ export default function RoomPage({ params }) {
   const { roomid } = useParams();
   const roomId = roomid;
   const [remoteCursors, setRemoteCursors] = useState({})
-  const [localCursor, setLocalCursor] = useState(null)
   const cursorTimeout = useRef(null)
   const userColor = useRef(`hsl(${Math.random() * 360}, 70%, 60%)`)
  
@@ -76,8 +75,6 @@ export default function RoomPage({ params }) {
       json["type"] = "insert"
       json["character"] = delta["ops"][1]["insert"]
     }
-    console.log(editorRef.current.getCursorPosition());
-
     WebSocketService.send(json)
   }
 
@@ -112,17 +109,14 @@ export default function RoomPage({ params }) {
             const delta = { position: 0, type: "insert", character: data.content }
             editorRef.current.setContents(delta)
           } else if (data.type === "op") {
-            console.log(data.operation)
             editorRef.current.setContents(data.operation)
           } else if (data.type === "cursor") {
             var data = data["cursor"]
-            console.log(data);
             setRemoteCursors(prev => ({
               ...prev,
               [data.uuid]: {
-                x : data.X,
-                y : data.Y, 
-                height : data.height,
+                index : data.index,
+                length : data.length,
                 username: data.username,
                 colour: data.colour,
                 lastUpdated: Date.now()
@@ -144,10 +138,6 @@ export default function RoomPage({ params }) {
   }, [roomId, username])
 
   useEffect(() => {
-    console.log(remoteCursors)
-  }, [remoteCursors])
-
-  useEffect(() => {
     const interval = setInterval(() => {
       setRemoteCursors(prev => {
         const now = Date.now();
@@ -156,28 +146,33 @@ export default function RoomPage({ params }) {
         );
         return updated;
       });
-    }, 300);
+    }, 1000);
 
     return () => clearInterval(interval);
   }, []);
 
-  
-  const handleSelectionChange = (range) => {
-    const bounds = editorRef.current.getBounds(range.index);
-    const cursorPosition = {
-      x: bounds.left,
-      y: bounds.top,
-      height: bounds.height,
-      index: range.index
-    };
+  const [cursorBounds, setCursorBounds] = useState([]);
 
-    console.log(cursorPosition)
+  useEffect(() => {
+    if (!editorRef.current) return;
+    console.log("123")
+    const updated = Object.entries(remoteCursors).map(([uuid, cursor]) => ({
+      uuid,
+      cursor,
+      bounds: editorRef.current.getBounds(cursor.index, cursor.length),
+    }));
+    setCursorBounds(updated);
+  }, [remoteCursors, editorRef]);
+
+  const handleSelectionChange = (range) => {
+
+    console.log(range);
     if (!cursorTimeout.current) {
       cursorTimeout.current = setTimeout(() => {
-        console.log(cursorPosition);
         WebSocketService.send({
           type : 'cursor',
-          ...cursorPosition, 
+          index : range.index, 
+          length : range.length,
           colour : userColor.current
         });
       
@@ -225,12 +220,9 @@ export default function RoomPage({ params }) {
           onSelectionChange={handleSelectionChange}
         />
 
-         {Object.entries(remoteCursors).map(([uuid, cursor]) => (
-            <RemoteCursor 
-              key={uuid} 
-              cursor = {cursor}
-            />
-          ))}
+        {cursorBounds.map(({ uuid, cursor, bounds }) => (
+          <RemoteCursor key={uuid} cursor={cursor} bounds={bounds} />
+        ))}
 
       </div>
     </div>

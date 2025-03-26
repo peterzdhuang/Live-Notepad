@@ -82,7 +82,6 @@ const Editor = ({ onChange, onSelectionChange }, ref) => {
         // Handle invalid type
         throw new Error('Invalid type: ' + type);
       }
-      console.log(delta);
 
       // Apply or queue the delta
       if (quillRef.current) {
@@ -92,6 +91,32 @@ const Editor = ({ onChange, onSelectionChange }, ref) => {
         pendingDeltasRef.current.push(delta); // Add to queue if Quill isn't ready
       }
     }, 
+    getEditorDimensions: () => {
+      if (!quillRef.current || !editorRef.current) return null;
+
+      const root = quillRef.current.root;
+      
+      return {
+        // Client dimensions (visible area)
+        clientWidth: root.clientWidth,
+        clientHeight: root.clientHeight,
+        
+        // Scroll dimensions (total content area)
+        scrollWidth: root.scrollWidth,
+        scrollHeight: root.scrollHeight,
+        
+        // Bounding rectangle (includes positioning and transformations)
+        boundingRect: root.getBoundingClientRect(),
+        
+        // Offset from document
+        offsetTop: root.offsetTop,
+        offsetLeft: root.offsetLeft,
+        
+        // Scroll position
+        scrollTop: root.scrollTop,
+        scrollLeft: root.scrollLeft
+      };
+    },
 
     getCursorPosition: () => {
       if (!quillRef.current) return null;
@@ -113,6 +138,7 @@ const Editor = ({ onChange, onSelectionChange }, ref) => {
       if (!quillRef.current) return '';
       return quillRef.current.getText();
     }
+    
   }));
 
   return <div ref={editorRef} style={{ height: '400px' }} />;

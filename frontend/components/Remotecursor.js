@@ -1,13 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const RemoteCursor = ({ cursor }) => {
-  if (!cursor) return null;
-  
+const RemoteCursor = ({ cursor, bounds }) => {
+  console.log(cursor, bounds);
   return (
     <motion.div
-      animate={{ left: cursor.x, top: cursor.y }}
-      initial={{ opacity: 0.6}}
+      animate={{ left: bounds.left + 19, top: bounds.top  + 61}}
+      initial={{ opacity: 0.6 }}
       transition={{ type: 'spring', stiffness: 500, damping: 30 }}
       style={{ position: 'absolute' }}
     >
@@ -16,16 +15,14 @@ const RemoteCursor = ({ cursor }) => {
         style={{
           position: 'absolute',
           width: '2px',
-          height: '15px',
-          top: '60px',
-          left: '27px',
+          height: `${bounds.height}px`,  // Match text height if needed
           backgroundColor: cursor.colour || 'blue',
           boxShadow: `0 0 5px ${cursor.colour || 'blue'}`,
           animation: 'cursor-blink 1.2s infinite',
-          opacity : 0.5
+          opacity: 0.5
         }}
       />
-      
+
       {/* Cursor Label */}
       <motion.div 
         initial={{ scale: 0.8, opacity: 0 }}
@@ -33,8 +30,8 @@ const RemoteCursor = ({ cursor }) => {
         transition={{ type: 'spring', stiffness: 300, damping: 10 }}
         style={{
           position: 'absolute',
-          top: '85px',
-          left: '20px',
+          left: '10px',
+          top: `${bounds.height + 5}px`,  // Label shows below the cursor
           display: 'flex',
           alignItems: 'center',
           backgroundColor: cursor.colour || 'blue',
@@ -47,7 +44,7 @@ const RemoteCursor = ({ cursor }) => {
           boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
           whiteSpace: 'nowrap',
           gap: '4px',
-          opacity : 0.5
+          opacity: 0.5
         }}
       >
         {/* Small user icon */}

@@ -161,14 +161,12 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 			case "cursor":
 				// Handle cursor updates
-				x, _ := msg["x"].(float64)
-				y, _ := msg["y"].(float64)
-				height, _ := msg["height"].(float64)
+				index, _ := msg["index"].(float64)
+				length, _ := msg["length"].(float64)
 				fmt.Println(msg)
 				cursor := CursorPosition{
-					X:        x,
-					Y:        y,
-					Height:   height,
+					Index:    int(index),
+					Length:   int(length),
 					Username: client.username,
 					UUID:     client.uuid,
 					Colour:   client.colour,

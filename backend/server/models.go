@@ -8,12 +8,11 @@ import (
 )
 
 type CursorPosition struct {
-	X        float64 `json:"X"`
-	Y        float64 `json:"Y"`
-	Height   float64 `json:"height"`
-	Username string  `json:"username"`
-	UUID     string  `json:"uuid"`
-	Colour   string  `json:"colour"`
+	Index    int    `json:"index"`
+	Length   int    `json:"length"`
+	Username string `json:"username"`
+	UUID     string `json:"uuid"`
+	Colour   string `json:"colour"`
 }
 
 type Client struct {
