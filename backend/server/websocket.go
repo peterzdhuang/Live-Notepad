@@ -36,14 +36,14 @@ func handleRoom(roomId string) *Room {
 
 func (room *Room) runRoom() {
 	for op := range room.operationChan {
-		log.Printf("Processing operation: type=%s, position=%d, character=%s, senderUUID=%s", op.Type, op.Position, op.Character, op.SenderUUID)
+		log.Printf("Processing operation: type=%s, position=%d, character=%s, length=%d, senderUUID=%s", op.Type, op.Position, op.Character, op.Length, op.SenderUUID)
 		room.mu.Lock()
 		before := room.Content
 
 		if op.Type == "insert" && op.Position <= len(room.Content) {
 			Append(room, op.Character, op.Position)
 		} else if op.Type == "delete" && op.Position <= len(room.Content) {
-			Delete(room, op.Character, op.Position)
+			Delete(room, op.Length, op.Position)
 		}
 		after := room.Content
 		log.Printf("Content changed from '%s' to '%s'", before, after)
@@ -150,10 +150,21 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			switch msgType {
 			case "insert", "delete":
 				// Handle text operations
+				var length int
+				if val, ok := msg["length"].(float64); ok {
+					length = int(val)
+				}
+
+				character := ""
+				if val, ok := msg["character"].(string); ok {
+					character = val
+				}
+
 				op := Operation{
 					Type:       msgType,
 					Position:   int(msg["position"].(float64)),
-					Character:  msg["character"].(string),
+					Character:  character,
+					Length:     length,
 					SenderUUID: client.uuid,
 				}
 				room.operationChan <- op

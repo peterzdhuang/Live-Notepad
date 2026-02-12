@@ -21,9 +21,11 @@ const Editor = ({ onChange, onSelectionChange }, ref) => {
           theme: 'snow',
           modules: {
             toolbar: [
-              [{ header: [1, 2, false] }],
-              ['bold', 'italic', 'underline'],
-              ['image', 'code-block'],
+              [{ header: [1, 2, 3, false] }],
+              ["bold", "italic", "underline", "strike"],
+              [{ list: "ordered" }, { list: "bullet" }],
+              ["link"],
+              ["clean"],
             ],
           },
         });
@@ -56,7 +58,8 @@ const Editor = ({ onChange, onSelectionChange }, ref) => {
       console.log(json);
       const position = json.position; // Number of characters to retain (0 if at start)
       const type = json.type;         // "insert" or "delete"
-      const character = json.character; // String to insert or number of chars to delete (as a string)
+      const character = json.character; // String to insert
+      const length = json.length;       // Number of chars to delete
       let delta = {};
 
       // Construct the delta based on the operation type
@@ -69,7 +72,7 @@ const Editor = ({ onChange, onSelectionChange }, ref) => {
           delta = { ops: [{ retain: position }, { insert: character }] };
         }
       } else if (type === 'delete') {
-        const deleteCount = parseInt(character, 10); // Convert string "number" to integer
+        const deleteCount = length; 
         if (position === 0) {
           // Delete from the beginning
           delta = { ops: [{ delete: deleteCount }] };

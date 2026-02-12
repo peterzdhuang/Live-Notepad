@@ -41,10 +41,9 @@ export default function Home() {
   return (
     <div className="room-selection-container">
       <div className="room-selection-card">
-        <h1 className="room-selection-title">Note Share</h1>
+        <h1 className="room-selection-title">Live Notepad</h1>
 
         <div className="tabs">
-        
           <button className={`tab ${activeTab === "create" ? "active" : ""}`} onClick={() => setActiveTab("create")}>
             Create Room
           </button>
@@ -58,13 +57,13 @@ export default function Home() {
         {activeTab === "join" ? (
           <form onSubmit={handleJoinRoom} className="room-form">
             <div className="form-group">
-              <label htmlFor="username">Username</label>
+              <label htmlFor="username">Your Name</label>
               <input
                 type="text"
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
+                placeholder="Enter your name"
               />
             </div>
 
@@ -75,7 +74,7 @@ export default function Home() {
                 id="roomId"
                 value={roomId}
                 onChange={(e) => setRoomId(e.target.value)}
-                placeholder="Enter room ID"
+                placeholder="Enter room ID to join"
               />
             </div>
 
@@ -86,17 +85,17 @@ export default function Home() {
         ) : (
           <form onSubmit={handleCreateRoom} className="room-form">
             <div className="form-group">
-              <label htmlFor="create-username">Username</label>
+              <label htmlFor="create-username">Your Name</label>
               <input
                 type="text"
                 id="create-username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
+                placeholder="Enter your name"
               />
             </div>
 
-            <button type="submit" className="submit-button create">
+            <button type="submit" className="submit-button">
               Create New Room
             </button>
           </form>
@@ -105,4 +104,3 @@ export default function Home() {
     </div>
   )
 }
-

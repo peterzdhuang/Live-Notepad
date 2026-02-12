@@ -41,6 +41,7 @@ type Operation struct {
 	Type       string `json:"type"`      // "insert" or "delete"
 	Position   int    `json:"position"`  // Position in the document
 	Character  string `json:"character"` // Character to insert (for insert only)
+	Length     int    `json:"length"`    // Number of characters to delete (for delete only)
 	SenderUUID string `json:"senderUUID"`
 }
 

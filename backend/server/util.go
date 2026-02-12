@@ -14,18 +14,11 @@ func Append(room *Room, char string, pos int) {
 	room.Content = string(content)
 }
 
-func Delete(room *Room, amount string, pos int) {
+func Delete(room *Room, amount int, pos int) {
 	// This needs to take in the amount to delete
 	content := []byte(room.Content)
 
-	amountInt, err := strconv.Atoi(amount)
-	if err != nil {
-		// Handle the error, e.g., print an error message and return
-		fmt.Println("Invalid amount:", err)
-		return
-	}
-
-	if amountInt < 0 {
+	if amount < 0 {
 		fmt.Println("Amount must be a non-negative integer")
 		return
 	}
@@ -35,11 +28,11 @@ func Delete(room *Room, amount string, pos int) {
 		return
 	}
 
-	if amountInt == 0 {
+	if amount == 0 {
 		return // Nothing to delete
 	}
 
-	for i := 0; i < amountInt; i++ {
+	for i := 0; i < amount; i++ {
 		if pos >= len(content) {
 			break // Stop deleting if position exceeds the remaining content.
 		}
